@@ -1,0 +1,233 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ThinkBox - by Rubika</title>
+<style>
+  body{font-family:Arial,sans-serif;background:#eef2f7;text-align:center;margin:0;padding:20px}
+  .container{width:92%;max-width:420px;background:#fff;margin:auto;padding:15px;border-radius:16px;box-shadow:0 4px 20px rgba(0,0,0,0.1)}
+  .header{color:#1a73e8}
+  #chat{height:380px;overflow-y:auto;text-align:left;border:1px solid #e0e0e0;padding:12px;border-radius:10px;background:#f9f9f9}
+  .msg{padding:8px;margin:6px 0;border-radius:10px}
+  .user{background:#dbeafe;text-align:right}
+  .bot{background:#e8f5e9}
+  .ansBox{background:#fff;border:1px solid #4caf50;padding:10px;border-radius:10px;margin-top:5px}
+  .input-area{display:flex;gap:8px;margin-top:10px}
+  input{flex:1;padding:10px;border-radius:10px;border:1px solid #ccc}
+  button{padding:10px 16px;background:#1a73e8;color:white;border:none;border-radius:10px;cursor:pointer}
+  .badge{background:#e8f0fe;color:#1a73e8;padding:5px 10px;border-radius:20px;font-size:12px}
+  .footer{font-size:13px;color:#888;margin-top:15px}
+</style>
+</head>
+<body>
+
+<h2 class="header">ThinkBox</h2>
+<p>First small question, then correct direct answer!</p>
+<p style="font-size:13px;color:#888;">Developed by <b>Rubika</b></p>
+<span class="badge">Quiz Mode ON | 3 Chance | Science | Maths | Medical</span>
+
+<div class="container">
+  <div id="chat">
+    <div class="msg bot"><b>ThinkBox:</b> Hello! Ask me anything - Science, Maths, Medical, History.</div>
+    <div class="msg bot"><b>ThinkBox:</b> Try: Who is richest man in India? What is diabetes?</div>
+  </div>
+  <div class="input-area">
+    <input id="msg" placeholder="Ask any question...">
+    <button id="sendBtn">Send</button>
+  </div>
+</div>
+<p class="footer">Developed by Rubika</p>
+
+<script>
+var waitingForQuiz = false;
+var quizAnswer = 0;
+var quizQuestionText = "";
+var pendingQuestion = "";
+var wrongCount = 0;
+
+function addMsg(who, text, isUser){
+  var chatBox = document.getElementById("chat");
+  var div = document.createElement("div");
+  div.className = "msg " + (isUser ? "user" : "bot");
+  var b = document.createElement("b");
+  b.textContent = who + ": ";
+  div.appendChild(b);
+  var span = document.createElement("span");
+  span.textContent = text;
+  div.appendChild(span);
+  chatBox.appendChild(div);
+  chatBox.scrollTop = chatBox.scrollHeight;
+}
+
+function addAnsBox(question, answer){
+  var chatBox = document.getElementById("chat");
+  var div = document.createElement("div");
+  div.className = "msg bot";
+  var b1 = document.createElement("b");
+  b1.textContent = "ThinkBox: Your question: " + question;
+  div.appendChild(b1);
+  var box = document.createElement("div");
+  box.className = "ansBox";
+  var b2 = document.createElement("b");
+  b2.textContent = "Direct Correct Answer: ";
+  box.appendChild(b2);
+  var span = document.createElement("span");
+  span.textContent = answer;
+  box.appendChild(span);
+  div.appendChild(box);
+  chatBox.appendChild(div);
+  chatBox.scrollTop = chatBox.scrollHeight;
+}
+
+function fixSpelling(t){
+  t = t.toLowerCase();
+  t = t.split("chef").join("chief");
+  t = t.split("cheif").join("chief");
+  t = t.split("vijai").join("vijay");
+  t = t.split("phisics").join("physics");
+  return t;
+}
+
+function getTopic(q){
+  var t = q.toLowerCase();
+  var removes = ["who is","who was","what is","what are","tell me about","explain","define","?"];
+  var i = 0;
+  while(i !== removes.length){ t = t.split(removes[i]).join(""); i = i + 1; }
+  t = t.split("chief minister of india").join("Prime Minister of India");
+  t = t.trim();
+  if(t === "" || t === "chief minister"){ t = "Chief Minister of Tamil Nadu"; }
+  return t;
+}
+
+function getSpecialAnswer(lower){
+  if(lower.indexOf("richest") !== -1 && lower.indexOf("india") !== -1){ return "Mukesh Ambani is richest man in India (2026). Reliance Industries Chairman. Born in Aden, Yemen."; }
+  if(lower.indexOf("richest") !== -1 && lower.indexOf("world") !== -1){ return "Elon Musk is richest man in World. Tesla, SpaceX Founder. Born in South Africa."; }
+  if(lower.indexOf("chief") !== -1 && lower.indexOf("india") !== -1 && lower.indexOf("tamil") === -1){
+    if(lower.indexOf("2014") !== -1){ return "Correction: India ku Chief Minister kidaiyadhu! 2014 la PM - Narendra Modi."; }
+    return "Correction: India ku Chief Minister kidaiyadhu! PM - Narendra Modi. Tamil Nadu CM - C. Joseph Vijay.";
+  }
+  if(lower.indexOf("chief") !== -1 && lower.indexOf("tamil") !== -1 && lower.indexOf("2014") !== -1){ return "In 2014, Tamil Nadu CM was J. Jayalalithaa."; }
+  if(lower.indexOf("chief") !== -1 && lower.indexOf("tamil") !== -1){ return "C. Joseph Vijay is CM of Tamil Nadu (2026). Born in Chennai. TVK Leader."; }
+  if(lower.indexOf("prime") !== -1){ return "Narendra Modi is PM of India. Born in Vadnagar, Gujarat. PM since 2014."; }
+  return "";
+}
+
+function trySolveMaths(msg){
+  var expr = msg.toLowerCase().split("x").join("*").split("what is").join("").split("calculate").join("").split("solve").join("").split("=").join("").trim();
+  var ok = true;
+  var i = 0;
+  while(i !== expr.length){
+    var ch = expr.charAt(i);
+    if("0123456789 +-*/().".indexOf(ch) === -1){ ok = false; }
+    i = i + 1;
+  }
+  if(ok && expr.length > 2){
+    try{
+      var val = eval(expr);
+      if(!isNaN(val)){ return "Direct Answer: " + msg + " = " + val; }
+    }catch(e){ return ""; }
+  }
+  return "";
+}
+
+function makeSmallQuiz(){
+  var a = Math.floor(Math.random()*8)+2;
+  var b = Math.floor(Math.random()*8)+2;
+  if(Math.random() > 0.5){ quizAnswer = a + b; quizQuestionText = a + " + " + b + " = ?"; }
+  else { quizAnswer = a * b; quizQuestionText = a + " x " + b + " = ?"; }
+  return quizQuestionText;
+}
+
+function showAnswer(topic, pendingQ){
+  var searchUrl = "https://en.wikipedia.org/w/api.php?action=query&list=search&srsearch=" + encodeURIComponent(topic) + "&format=json&origin=*&srlimit=1";
+  fetch(searchUrl).then(function(res){ return res.json(); }).then(function(searchData){
+    var bestTitle = topic;
+    if(searchData.query && searchData.query.search && searchData.query.search.length !== 0){
+      bestTitle = searchData.query.search[0].title;
+    }
+    var summaryUrl = "https://en.wikipedia.org/api/rest_v1/page/summary/" + encodeURIComponent(bestTitle);
+    return fetch(summaryUrl).then(function(res2){ return res2.json(); }).then(function(data){
+      var finalAns = "";
+      if(data.extract){
+        var parts = data.extract.split(". ");
+        finalAns = parts[0] + ". " + (parts[1] ? parts[1] + "." : "");
+      } else {
+        finalAns = "I searched for " + pendingQ + ". Try clearly like - What is Diabetes?";
+      }
+      addAnsBox(pendingQ, finalAns);
+    });
+  }).catch(function(){
+    addMsg("ThinkBox", "Internet slow. Try again ma! Check data ON.", false);
+  });
+}
+
+function giveMainAnswer(){
+  waitingForQuiz = false;
+  wrongCount = 0;
+  var special = getSpecialAnswer(fixSpelling(pendingQuestion));
+  if(special !== ""){
+    addAnsBox(pendingQuestion, special);
+  } else {
+    var mathsAns = trySolveMaths(pendingQuestion);
+    if(mathsAns !== ""){
+      addAnsBox(pendingQuestion, mathsAns);
+    } else {
+      var topic = getTopic(pendingQuestion);
+      showAnswer(topic, pendingQuestion);
+    }
+  }
+}
+
+function sendMessage(){
+  var input = document.getElementById("msg");
+  var message = input.value.trim();
+  if(message === ""){ return; }
+  addMsg("You", message, true);
+  input.value = "";
+  var lowerMsg = fixSpelling(message);
+
+  if(waitingForQuiz){
+    if(lowerMsg === "skip"){
+      addMsg("ThinkBox", "Okay skip panniten! Quiz answer " + quizAnswer + ". Ipo main answer tharen!", false);
+      giveMainAnswer();
+      return;
+    }
+    var nums = message.match(/\d+/g);
+    var userAns = -1;
+    if(nums){ userAns = parseInt(nums[0]); }
+    if(userAns === quizAnswer){
+      addMsg("ThinkBox", "Correct! " + quizQuestionText + " = " + quizAnswer + "! Searching correct answer for " + pendingQuestion + "...", false);
+      giveMainAnswer();
+    } else {
+      wrongCount = wrongCount + 1;
+      if(wrongCount === 1){
+        addMsg("ThinkBox", "Oops! " + quizQuestionText + " answer is not " + userAns + ". Try again! Hint: Konjam yosichu paaru! " + quizQuestionText + " | Type 'skip' to skip", false);
+      } else if(wrongCount === 2){
+        addMsg("ThinkBox", "2nd time thappu! Last chance! Hint: Answer " + quizAnswer + " ku pakkathula irukum! Try again! " + quizQuestionText, false);
+      } else {
+        addMsg("ThinkBox", "Paravala! 3 times try pannita! Correct answer " + quizQuestionText + " = " + quizAnswer + ". Ipo un main question ku answer tharen!", false);
+        giveMainAnswer();
+      }
+    }
+    return;
+  }
+
+  if(lowerMsg === "hi" || lowerMsg === "hello"){
+    addMsg("ThinkBox", "Hello! Ask me any question - Science, Maths, Medical, History.", false);
+  } else if(lowerMsg.indexOf("bye") !== -1){
+    addMsg("ThinkBox", "Bye! Think first, search second.", false);
+  } else {
+    pendingQuestion = message;
+    waitingForQuiz = true;
+    wrongCount = 0;
+    var q = makeSmallQuiz();
+    addMsg("ThinkBox", "Super question! Before direct answer, small question: " + q + " Answer this, then I will give correct direct answer for " + message + "! Thappa sonna 3 chance irukum, 'skip' nu type pannalam!", false);
+  }
+}
+
+document.getElementById("sendBtn").addEventListener("click", sendMessage);
+document.getElementById("msg").addEventListener("keydown", function(e){ if(e.key === "Enter"){ sendMessage(); } });
+</script>
+</body>
+</html>
